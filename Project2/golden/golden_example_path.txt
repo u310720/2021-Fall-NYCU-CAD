@@ -1,0 +1,3 @@
+Longest delay = 0.182414, the path is: n2 -> n5 -> n6 -> n9 -> n12
+Longest delay = 0.180972, the path is: n1 -> n4 -> n6 -> n9 -> n12
+Longest delay = 0.180972, the path is: n1 -> n4 -> n6 -> n9 -> n12
