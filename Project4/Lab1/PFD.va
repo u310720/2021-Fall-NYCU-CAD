@@ -1,0 +1,82 @@
+// VerilogA for 2019CAD, pfd, veriloga
+
+`include "constants.h"
+`include "discipline.h"
+
+module pfd(vin_A, vin_B, sigout_A, sigout_B);
+input vin_A, vin_B;
+output sigout_A, sigout_B;
+electrical vin_A, vin_B, sigout_A, sigout_B;
+electrical reset;
+
+parameter real vlogic_high = 1.8;
+parameter real vlogic_low = 0;
+
+parameter real vtrans_up = 0.9;
+parameter real vtrans_dn = 0.9;
+
+parameter real tdelay_up_cp_switch = 238.6p from [0:inf);
+parameter real tdelay_dn_cp_switch = 238.6p from [0:inf);
+
+parameter real tr_up = 1p from [0:inf);
+parameter real tf_up = 1p from [0:inf);
+parameter real tr_dn = 1p from [0:inf);
+parameter real tf_dn = 1p from [0:inf);
+
+parameter real tdelay_reset = 93.56p from [0:inf); 
+
+
+
+//
+// flags for transitions 
+//
+  integer tpos_on_A, tpos_on_B; 
+  real sigout_A_val, sigout_B_val;
+  real reset_val;
+  
+  analog begin
+     @ (initial_step) begin
+        sigout_A_val = 0;
+        sigout_B_val = 0;
+        tpos_on_A = 0;
+        tpos_on_B = 0;
+        reset_val= 0; 
+     end
+
+
+     @ (cross(V(vin_A) - vtrans_up, +1))  
+          tpos_on_A = 1;
+
+     @ (cross(V(vin_B) - vtrans_dn, +1))  
+          tpos_on_B = 1;
+
+     if (tpos_on_A && tpos_on_B)
+        reset_val = vlogic_high;
+     else 
+        reset_val = vlogic_low;
+
+     @ (cross(V(reset) - vtrans_dn, +1))
+       begin
+        tpos_on_A = 0;
+        tpos_on_B = 0;
+       end
+
+     if (tpos_on_A)
+        sigout_A_val = vlogic_high;
+     else
+        sigout_A_val = vlogic_low;
+
+     if (tpos_on_B)
+        sigout_B_val = vlogic_high;
+     else 
+        sigout_B_val = vlogic_low;
+
+     V(sigout_A) <+ transition(sigout_A_val,tdelay_up_cp_switch, tr_up, tf_up);
+
+     V(sigout_B) <+ transition(sigout_B_val,tdelay_dn_cp_switch, tr_dn, tf_dn);
+
+     V(reset) <+ transition(reset_val, tdelay_reset, tr_dn, tf_dn);
+  end
+
+endmodule
+

@@ -1,0 +1,40 @@
+// VerilogA for 2019CAD, sin2pulse, veriloga
+
+`include "constants.h"
+`include "discipline.h"
+
+
+module sin2pulse(sin_in,pulse_out);
+input sin_in;
+output pulse_out;
+electrical sin_in, pulse_out;
+
+parameter real vlogic_high = 1.8;
+parameter real vlogic_low = 0;
+parameter real vtrans = 0.9;
+parameter real delay_div = 0n; 
+parameter real trise = 40p;
+parameter real tfall = 40p;
+
+
+
+real out_val;
+
+  analog begin
+    @ (initial_step) begin
+       out_val = 0;
+    end
+
+    @ (cross(V(sin_in) - vtrans, +1)) begin //positive
+	out_val = vlogic_high;
+	end
+
+    @ (cross(V(sin_in) - vtrans, -1)) begin //negative
+	out_val = vlogic_low;	
+	end
+
+
+    V(pulse_out) <+ transition(out_val, delay_div, trise, tfall);
+  end
+
+endmodule

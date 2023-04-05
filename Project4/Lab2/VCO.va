@@ -1,0 +1,62 @@
+// VerilogA for 2019CAD, VCO, veriloga
+
+`include "constants.h"
+`include "discipline.h"
+
+`define PI 3.14159
+
+module vco(vin, vout);
+input vin;
+output vout;
+electrical vin, vout;
+electrical in_cal;
+//electrical v_difa, v_dif;
+
+parameter real amp = 0.9;           //  amplitude of vout [V]
+parameter real vco_gain = 1.1402G;  //  oscillator conversion gain [Hz/volt]
+parameter real freq_min = 294.72M;    //  the minimum frequency of VCO 
+parameter real freq_max = 987.97M;   //  the maximum frequency of VCO 
+
+parameter real vtrans = 0.9;
+parameter real Vdd = 1.8;
+parameter integer n_load = 1;    // If n_load=1, the load is NMOS.
+parameter real v_min = 0.59227;     // the minimum voltage of VCO work
+parameter real v_max = 1.2;      // the minimum voltage of VCO work
+    
+
+  real wc_min;                // minimum freq in rad/s
+  real wc_max;                // maximum freq in rad/s
+  real wc;
+  real phase_nonlin;      // the idt(Kvco*Vcont) of phase
+  real phase_lin;         // the wc*time component of phase
+  real v_dif;
+
+  analog begin
+      
+    @ ( initial_step) begin
+      wc_min = 2 * `PI * freq_min;
+      wc_max = 2 * `PI * freq_max;
+    end
+    
+    if (n_load)
+      V(in_cal) <+ V(vin);
+    else
+      V(in_cal) <+ Vdd - V(vin);
+
+    if (V(in_cal) < v_max)
+       wc = wc_min; 
+    else
+       wc = wc_max; 
+
+    phase_lin = wc * $abstime ;
+
+      if (V(in_cal) > v_min) 
+         v_dif=V(in_cal)-v_min;
+      else
+         v_dif=0;
+    phase_nonlin = 2 * `PI * vco_gain * idt(v_dif,0);
+
+    V(vout) <+ amp * cos(phase_lin + phase_nonlin) + vtrans;
+  end
+
+endmodule

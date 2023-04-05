@@ -1,0 +1,139 @@
+// VerilogA for 2019CAD, CP, veriloga
+
+`include "constants.vams"
+`include "disciplines.vams"
+
+module cp(siginc, sigdec, vout, vsrc);
+
+
+input siginc, sigdec;
+inout vsrc;
+output vout;
+
+electrical siginc, sigdec, vout, vsrc;
+electrical vsrc1, vsrc2;
+
+parameter real iamp=1 from [0:inf);
+parameter real vtrans = 0.9;
+parameter real tdel=0p from [0:inf);
+parameter real trise=1p from (0:inf);
+parameter real tfall=1p from (0:inf);
+parameter real mis = 0.52;
+parameter real tstop = 4.28n;
+parameter real ioff = 0;
+parameter real accurate = 1 ;
+parameter real ioff_begin = 0.24;
+
+real iout_val, iout_val2;
+real cona, conb, Itemp1, Itemp2, up, dn;
+
+   //
+   // Current multiplier - returns direction that charge should be pumped
+   //
+
+   analog function real i_mult;
+   input inc;
+   input dec;
+   input vtrans;
+   real inc;
+   real dec;
+   real vtrans;
+
+      integer inc_high;
+      integer dec_high;
+   
+   begin
+      inc_high = inc > vtrans;
+      dec_high = dec > vtrans;
+      i_mult = 0.0;
+      if (inc_high == dec_high) begin 
+         if(inc_high) begin
+            i_mult = mis;
+         end
+         else begin
+            i_mult = mis*accurate + ioff_begin - ioff_begin*accurate;
+         end
+      end else if (inc_high) begin
+         i_mult = 1.0;
+      end else if (dec_high) begin
+         i_mult = -1 + mis;
+      end
+   end   
+   endfunction
+
+
+   analog begin
+  
+      @ ( initial_step ) begin
+	 iout_val = iamp*i_mult(V(siginc), V(sigdec), 0.9);
+         cona=0;
+         conb=0;
+         up=0;
+         dn=0;
+      end
+
+      @ (cross(V(siginc) - vtrans, +1)) begin
+         iout_val = iamp*i_mult(V(siginc),V(sigdec),0.9);
+         cona=0;
+         conb=0;
+         up=1;
+         dn=dn;
+      end
+      @ (cross(V(sigdec) - vtrans, +1)) begin
+         iout_val = iamp*i_mult(V(siginc),V(sigdec),0.9);
+         cona=0;
+         conb=0;
+         up=up;
+         dn=1;
+      end
+
+      @ (cross(V(siginc) - vtrans, -1)) begin
+         iout_val = iamp*i_mult(V(siginc),V(sigdec),0.9);
+         cona=1;
+         conb=0;
+         up=0;
+         dn=dn;
+      end
+      @ (cross(V(sigdec) - vtrans, -1)) begin
+         dn=0;
+         up=up;
+         iout_val = iamp*i_mult(V(siginc),V(sigdec),0.9);
+         if(cona) begin
+            conb=1;
+            iout_val=ioff - ioff*accurate;
+//            iout_val=iout_val - iout_val*accurate;
+         end
+         else begin
+            conb=0;
+            iout_val=iout_val;
+         end
+      end
+
+
+      if(up) begin
+          if(dn)
+             iout_val2 = iout_val*accurate + ioff_begin - ioff_begin*accurate;
+          else
+             iout_val2 = mis*accurate + ioff_begin - ioff_begin*accurate;
+      end
+      else
+          iout_val2 = iout_val;
+
+
+      I(vsrc1) <+ transition(iout_val2,tdel,trise,tstop);
+      I(vsrc2) <+ transition(iout_val,tdel,trise,tfall);
+
+      if(conb) begin
+         Itemp1 = I(vsrc, vsrc1);
+         I(vsrc,vout) <+ Itemp1;
+      end
+
+      else begin
+         Itemp2 = I(vsrc, vsrc2);
+         I(vsrc,vout) <+ Itemp2;
+      end
+
+
+
+   end
+endmodule

@@ -1,0 +1,29 @@
+// VerilogA for 2019CAD, divider, veriloga
+
+`include "constants.h"
+`include "discipline.h"
+
+module divider(out, in);
+
+output out; voltage out;	// output
+input in; voltage in;		// input (edge triggered)
+parameter real vh=1.8;		// output voltage in high state
+parameter real vl=0;		// output voltage in low state
+parameter integer ratio=16 from [16:inf);	// divide ratio
+parameter integer dir=1 from [-1:1] exclude 0;
+				// dir=1 for positive edge trigger
+				// dir=-1 for negative edge trigger
+parameter real tt=1n from (0:inf);	// transition time of output signal
+parameter real td=0 from [0:inf);	// average delay from input to output
+integer count, n;
+real vth=(vh+vl)/2;	// threshold voltage at input
+analog begin
+    @(cross(V(in) - vth, dir)) begin
+	count = count + 1; // count input transitions
+	if (count >= ratio)
+	    count = 0;
+	n = (2*count >= ratio);
+    end
+    V(out) <+ transition(n ? vh : vl, td, tt);
+end
+endmodule

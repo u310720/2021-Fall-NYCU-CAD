@@ -1,0 +1,20 @@
+// VerilogA for 2019CAD, LF, veriloga
+
+`include "constants.vams"
+`include "disciplines.vams"
+
+module LF(in,vctrl);
+input in;
+output vctrl;
+electrical in,vctrl;
+parameter real R=2.4k;
+parameter real C1=60p;
+parameter real C2=3p;
+parameter real Beta=20;
+parameter real Icp=32u;
+
+analog begin
+V(vctrl)<+ laplace_nd (I(in),{Icp/C1,Icp*R},{0,(1+Beta)/Beta,R*C1/Beta});
+end
+
+endmodule
